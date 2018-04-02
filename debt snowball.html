@@ -1,0 +1,242 @@
+<html>
+	<head>
+		<style>
+			.cntr {
+				display: grid;
+				grid-template-columns: 1fr auto 1fr;
+			}
+
+			.frm {
+				display: grid;
+			}
+
+			.cntr * {
+				grid-column: 2;
+			}
+
+			.inp {
+				text-align: center;
+				font-size: 1.3em;
+				border-radius: 0.3em;
+				border-style: solid;
+				border-width: 1px;
+			}
+
+			span.res {
+				font-size: 1.1em;
+				font-weight: bold;
+			}
+
+			p.res {
+				font-size: 1.3em;
+			}
+
+			.cntr button {
+				border-radius: 0.3em;
+				font-size: 1.5em;
+			}
+		</style>
+		<link rel="stylesheet" href="https://rawgit.com/c3js/c3/master/c3.min.css"/>
+		<script src="https://d3js.org/d3.v5.min.js"></script>
+		<script src="https://rawgit.com/c3js/c3/master/c3.min.js"></script>
+	</head>
+	<body>
+		<center class="cntr title">
+			<form class="frm">
+			</form>
+			<p></p>
+			<div id="chart"></div>
+		</center>
+		<script>
+			/** Acts as an account that is affected by compound interest
+				PARAMS
+					{Object} config	- Constructor uses the value and rate properties
+						config.value - The starting value of the account
+						config.rate  - The interest rate of the account
+			*/
+			function CompoundAccount(config){
+				// Default config isn't filled because we need to check for the properties either way
+				//   No sense in investing the effort
+				config = config || {};
+							
+				// Start value of the account, default $0
+				this.value = config.hasOwnProperty("value") ? toMoney(config.value) : 0;
+
+				// Interest rate of the account, default 0%
+				const rate = config.hasOwnProperty("rate") ? config.rate : 0;
+
+				// Floor to the hundredth
+				function roundToMoney(num){
+					return ~~(num*100)/100;
+				}
+
+				/** Accrues interest at the assigned rate, and will try to apply the delta to the principal
+					PARAM
+						{number} delta - The change in principal to be applied to the account
+					RETURNS
+						{number} - The amount of delta that was not applied to the principal
+				*/
+				this.step = function(delta){
+					delta = roundToMoney(delta) || 0;
+					
+					let newValue = roundToMoney(this.value*(1+rate) + delta);
+					let remainingDelta = 0
+					
+					if (newValue < 0) {
+						remainingDelta = -newValue;
+						newValue = 0;
+					}
+
+					this.value = newValue;
+					return remainingDelta;
+				}
+			}
+		</script>
+		<script>
+			// utils
+			function getVal(id){
+				return parseFloat(formatFromMoney(document.getElementById(id).value));
+			}
+			function setText(id, str){
+				const el = document.getElementById(id);
+				el.innerText = str;
+				el.value = str;
+			}
+			function formatToMoney(num){
+				return "$" + num.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+			}
+			function formatFromMoney(str){
+				return Number(str.replace(/[^0-9\.-]+/g,""));
+			}
+			function formatToYear(num){
+				return num.toFixed();
+			}
+
+
+			// Business Logic
+			function updateResults(){
+				reformatInputs();
+				
+				const result = findResult({
+					value: getVal("in_startValue"),
+					rate: SNPRATE/12,
+					payment: getVal("in_monthlyPayment"),
+					desiredDraw: getVal("in_desiredDraw")
+				})
+
+				const currYear = (new Date()).getFullYear();
+				const age = getVal("in_currAge");
+				const startYear = getVal("in_startYear");
+				const endAge = age + ~~(result.duration/12) + startYear - currYear;
+				const endYear = startYear + ~~(result.duration/12);
+
+				setText("out_year", endYear);
+				setText("out_age", endAge);
+				setText("out_fund", formatToMoney(result.amount).split(".")[0]);
+			}
+
+			/**
+				data.value 			= current value of account
+				data.rate 	 		= interest rate
+				data.payment 		= monthly payment amount
+				data.desiredDraw	= how much we eventually want to draw from investments monthly
+			*/
+			function findResult(data){
+				const result = {
+					duration: 0,
+					amount: 0
+				};
+				const ca = new CompoundAccount(data);
+				let months = 0;
+
+				// make sure the account won't not grow
+				if (!((data.value==0 && data.payment<=0) || (data.rate<=0 && data.payment<=0))){
+					// Iterate until we have enough
+					while (!haveEnoughInvested(ca, data, months++) && months < 1000){
+						ca.step(data.payment)
+					}
+
+					if (months >= 1000){
+						console.log(ca, data);
+						throw new Error("Infinite Loop");
+					}
+				}
+				console.log(months);
+
+				result.duration = months;
+				result.amount = ca.value;
+
+				return result;
+			}
+
+			function haveEnoughInvested(ca, data, months){
+				// how much we want to draw(compensating for inflation) is less than how much we can draw per month
+				return data.desiredDraw*Math.pow(1+(INFLATION/12), months) <= ca.value*DRAWRATE/12;
+			}
+
+
+			// Setup
+			let prevTO = 0;
+			function makeUpdateCallback(time){
+				return () => {
+					window.clearTimeout(prevTO);
+					prevTO = window.setTimeout(updateResults, time || 0)
+				};
+			}
+
+			(function(){
+				const svg = document.querySelector(".nav-toggle-label svg");
+				const header = document.getElementById("headerAnnouncementWrapper");
+				const svgStrokeColor = !!svg ? window.getComputedStyle(svg, null).stroke : "#7c0404";	// Dark Red
+				const titleColor = !!header ? window.getComputedStyle(header, null).color : "#01044b";	// Dark Blue
+				const titleBG = /*!!header ? window.getComputedStyle(header, null).backgroundColor : */"#d5d7f1";	// Light Blue
+
+				const inputs = document.querySelectorAll("input.inp");
+				for (i of inputs){
+					i.oninput = makeUpdateCallback(2000);
+					i.onblur = makeUpdateCallback(0);
+					i.style.color = titleColor;
+					i.style.background = titleBG;
+				}
+
+				const spans = document.querySelectorAll("span.res");
+				for (i of spans){
+					i.style.color = svgStrokeColor; 
+				}
+
+
+			})()
+
+			var chart = c3.generate({
+			    bindto: '#chart',
+			    data: {
+			    	x: "xs",
+			    	columns: [
+						['xs', 30, 200, 100, 400, 150, 250],
+						['Amount', 50, 20, 10, 40, 15, 25]
+					],
+					point: {
+						show: false
+					}
+			    }
+			});
+
+			/**
+			// Add lines
+			chart.load({
+				columns: [
+					['data1', 300, 100, 250, 150, 300, 150, 500],
+					['data2', 100, 200, 150, 50, 100, 250]
+				]
+			});
+
+			// Remove lines
+			chart.unload({
+				ids: ['data2', 'data3']
+			});
+			*/
+
+			// Start up
+		</script>
+	</body>
+</html>
