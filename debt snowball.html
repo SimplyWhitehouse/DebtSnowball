@@ -1,42 +1,62 @@
 <html>
 	<head>
 		<style>
+			:root {
+				--myBorderRadius: 0.3em;
+			}
+			
+			.cntr {
+				font-size: 1.3em;
+			}
+			
 			.debts {
 				display: grid;
-				font-size: 1.3em;
 				padding: 10px;
 			}
 			
 			.debt {
+				--borderVal: 1px;
 				padding: 5px;
 			}
 			
 			.money, .percent{
 				text-align: center;
-				border-radius: 0.3em;
+				border-radius: var(--myBorderRadius);
 				border-style: solid;
 				border-width: 1px;
 				padding: 3px;
 				margin: 0px 5px;
+				--borderVal: 0;
 			}
 						
 			.money span, .percent span{
 				color: #777;
 			}
 			
-			.money input{
+			.money .inp{
 				width: 6em;
+				background: white !important;
 			}
 			
-			.percent input{
+			.percent .inp{
 				width: 3em;
+				background: white !important;
 			}
 			
 			.inp {
-				border: 0;
+				border: var(--borderVal);
 				outline: none;
 				margin: 0;
 				font-size: 1em;
+				text-align: right;
+			}
+			
+			.debtName {
+				font-size: 1em;
+				border-width: 1px;
+				border-color: black;
+				padding-left: 5px;
+				border-radius: var(--myBorderRadius);
 			}
 			
 			.delete {
@@ -52,16 +72,32 @@
 			}
 
 		</style>
-		<link rel="stylesheet" href="https://rawgit.com/c3js/c3/master/c3.min.css"/>
 		<script src="https://d3js.org/d3.v5.min.js"></script>
 		<script src="https://rawgit.com/c3js/c3/master/c3.min.js"></script>
 	</head>
 	<body>
 		<center class="cntr title">
-			<div id="div_debts" class="debts"></div>
+			<div>
+				<style>
+					@import url("https://rawgit.com/c3js/c3/master/c3.min.css");
+				</style>
+				<div id="chart"></div>
+			</div>
+			<hr/>
+			<div id="div_payment">
+				<h2>Payment</h2>
+				<p>How Much Can You Pay Toward Debt A Month?</p>
+				<span class="money">
+					<span>$</span>
+					<input id="inp_payment" class="inp" data-type="money" value="0.00"/>
+				</span>
+			</div>
+			<hr/>
+			<div id="div_debts" class="debts">
+				<h2>Debts</h2>
+			</div>
 			<button id="btn_addDebt">+</button>
 			<p></p>
-			<div id="chart"></div>
 		</center>
 		<script>
 			/** Acts as an account that is affected by compound interest
@@ -119,34 +155,44 @@
 				el.value = str;
 			}
 			function formatToMoney(num){
-				return "$" + num.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+				return num.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
 			}
 			function formatFromMoney(str){
 				return Number(str.replace(/[^0-9\.-]+/g,""));
 			}
-			function formatToYear(num){
-				return num.toFixed();
+			function formatMoneyElement(el){
+				el.value = formatToMoney(formatFromMoney(el.value));
 			}
-			function getDebtMarkup(){
-				
-				const debtId = generateDebtID();
+			function formatToPercent(num){
+				return num.toFixed(2);
+			}
+			function formatPercentElement(el){
+				el.value = formatToPercent(Number(el.value));
+			}
+			function makeDebtElement(debtId){
 				
 				const markdown =
 				`
 				<div class="debt" id="${debtId}">
+					<input class="debtName" placeholder="Name"/>
 					<span class="money">
 						<span>$</span>
-						<input class="inp" value="0"/>
+						<input class="inp" value="0.00" data-type="money"/>
 					</span>
 					at
 					<span class="percent">
-						<input class="inp" value="0.0"/>
+						<input class="inp" value="0.00" data-type="percent"/>
 						<span>%</span>
 					</span>
-					<button class="delete inp" onclick="deleteDebtClick(this)">X</button>
+					<button class="delete inp" tabindex="-1">X</button>
 				</div>
 				`;
-				return markdown;
+				return strToHTML(markdown);
+			}
+			function strToHTML(str){
+				const wrapper = document.createElement("div");
+				wrapper.innerHTML = str;
+				return wrapper.children[0];
 			}
 			function generateDebtID(){
 				const options = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -158,44 +204,23 @@
 					.join("");
 				} while (idExists(id));
 				return id;
-				
 			}
 			function idExists(id){
 				return !!document.getElementById(id);
 			}
-
-
-			// Business Logic
-			function updateResults(){
-				reformatInputs();
+			var queryForInputs = ".money input, .percent input";
+			function addHandlersToDebt(div_debt){
+				// Formatting the inputs after timeout or on blur
+				div_debt.querySelectorAll(queryForInputs)
+				.forEach(el => {
+					el.onchange = makeUpdateCallback(2000);
+					el.onblur = makeUpdateCallback(0);
+				});
 				
-				const result = findResult({
-					value: getVal("in_startValue"),
-					rate: SNPRATE/12,
-					payment: getVal("in_monthlyPayment"),
-					desiredDraw: getVal("in_desiredDraw")
-				})
-
-				const currYear = (new Date()).getFullYear();
-				const age = getVal("in_currAge");
-				const startYear = getVal("in_startYear");
-				const endAge = age + ~~(result.duration/12) + startYear - currYear;
-				const endYear = startYear + ~~(result.duration/12);
-
-				setText("out_year", endYear);
-				setText("out_age", endAge);
-				setText("out_fund", formatToMoney(result.amount).split(".")[0]);
+				// Delete Button
+				const btn_del = div_debt.querySelector(".delete")
+				btn_del.onclick = () => deleteDebtClick(btn_del);
 			}
-
-			function addDebtClick(evt){
-				document.getElementById("div_debts").innerHTML += getDebtMarkup();
-			}
-			
-			function deleteDebtClick(btn){
-				btn.parentElement.remove();
-			}
-
-			// Setup
 			let prevTO = 0;
 			function makeUpdateCallback(time){
 				return () => {
@@ -203,15 +228,73 @@
 					prevTO = window.setTimeout(updateResults, time || 0)
 				};
 			}
+			const reformatMap = {
+				"money": formatMoneyElement,
+				"percent": formatPercentElement,
+			}
+			function reformatInputs(){
+				document.querySelectorAll(queryForInputs)
+				.forEach(el => {
+					reformatMap[el.dataset.type](el);
+				});
+			}
+			function getAllDebts(){
+				return Array.from(document.querySelectorAll(".debt"))
+				.map(getDebtData)
+				.sort(ascendingValue);
+			}
+			function ascendingValue(a, b){
+				return a.value - b.value;
+			}
+			function getDebtData(debt){
+				const val = Number(debt.querySelector(".money .inp").value);
+				const rate = Number(debt.querySelector(".percent .inp").value)/100;
+				const name = debt.querySelector(".debtName").value;
+				
+				return {
+					"value": val,
+					"rate" : rate,
+					"id"   : debt.id,
+					"name" : name
+				};
+			}
 
-			document.getElementById("btn_addDebt").onclick = addDebtClick;
+
 			
+			// Business Logic
+			function updateResults(){
+				reformatInputs();
+			}
+
+			function addDebtClick(){
+				const debtId = generateDebtID();
+				const debt = makeDebtElement(debtId);
+				document.getElementById("div_debts").appendChild(debt);
+				addHandlersToDebt(debt);
+			}
+			
+			function deleteDebtClick(btn){
+				btn.parentElement.remove();
+				updateResults();
+			}
+
+			// Setup
+			
+			// The inputs
+			document.getElementById("btn_addDebt").onclick = addDebtClick;
+			document.querySelectorAll(queryForInputs)
+			.forEach(el => {
+				el.onchange = makeUpdateCallback(2000);
+				el.onblur = makeUpdateCallback(0);
+			});
+			
+			/* This is meant to color things so they match the theme of the page... It may not be applicable *
 			(function(){
 				const svg = document.querySelector(".nav-toggle-label svg");
 				const header = document.getElementById("headerAnnouncementWrapper");
 				const svgStrokeColor = !!svg ? window.getComputedStyle(svg, null).stroke : "#7c0404";	// Dark Red
 				const titleColor = !!header ? window.getComputedStyle(header, null).color : "#01044b";	// Dark Blue
-				const titleBG = /*!!header ? window.getComputedStyle(header, null).backgroundColor : */"#d5d7f1";	// Light Blue
+				const titleBG = "#d5d7f1";	// Light Blue
 
 				const inputs = document.querySelectorAll("input.inp");
 				for (i of inputs){
@@ -228,6 +311,7 @@
 
 
 			})()
+			/* */
 
 			var chart = c3.generate({
 			    bindto: '#chart',
@@ -239,6 +323,9 @@
 					],
 					point: {
 						show: false
+					},
+					legend: {
+						show: false
 					}
 			    }
 			});
@@ -247,19 +334,21 @@
 			// Add/Update lines
 			chart.load({
 				columns: [
-					['data1', 300, 100, 250, 150, 300, 150, 500],
-					['data2', 100, 200, 150, 50, 100, 250]
+					['xs', 300, 100, 250, 150, 300, 150, 500],
+					['Amount', 100, 200, 150, 50, 100, 250]
 				]
 			});
 
 			// Remove lines
 			chart.unload({
-				ids: ['data2', 'data3']
+				ids: ['Amount', 'xs']
 			});
 			*/
 
 			// Start up
-			div_debts.innerHTML += getDebtMarkup();
+			addDebtClick();
+			addDebtClick();
+			updateResults();
 		</script>
 	</body>
 </html>
