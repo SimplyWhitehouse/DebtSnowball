@@ -1,40 +1,50 @@
 <html>
 	<head>
 		<style>
-			.cntr {
+			.debts {
 				display: grid;
-				grid-template-columns: 1fr auto 1fr;
-			}
-
-			.frm {
-				display: grid;
-			}
-
-			.cntr * {
-				grid-column: 2;
-			}
-
-			.inp {
-				text-align: center;
 				font-size: 1.3em;
+			}
+			
+			.debt {
+				padding: 5px;
+			}
+			
+			.money, .percent{
+				text-align: center;
 				border-radius: 0.3em;
 				border-style: solid;
 				border-width: 1px;
+				padding: 3px;
+				margin: 0px 5px;
+			}
+						
+			.money span, .percent span{
+				color: #777;
+			}
+			
+			.money input{
+				width: 6em;
+			}
+			
+			.percent input{
+				width: 3em;
+			}
+			
+			.inp {
+				border: 0;
+				outline: none;
+				margin: 0;
+				font-size: 1em;
+			}
+			
+			.delete {
+				font-size: 1em;
+				border-width: 1px;
+				border-color: black;
+				border-radius: 10px;
 			}
 
-			span.res {
-				font-size: 1.1em;
-				font-weight: bold;
-			}
-
-			p.res {
-				font-size: 1.3em;
-			}
-
-			.cntr button {
-				border-radius: 0.3em;
-				font-size: 1.5em;
-			}
 		</style>
 		<link rel="stylesheet" href="https://rawgit.com/c3js/c3/master/c3.min.css"/>
 		<script src="https://d3js.org/d3.v5.min.js"></script>
@@ -42,8 +52,7 @@
 	</head>
 	<body>
 		<center class="cntr title">
-			<form class="frm">
-			</form>
+			<div id="debts" class="debts"></div>
 			<p></p>
 			<div id="chart"></div>
 		</center>
@@ -111,6 +120,25 @@
 			function formatToYear(num){
 				return num.toFixed();
 			}
+			function getDebtMarkup(){
+				
+				const markdown =
+				`
+				<div class="debt">
+					<span class="money">
+						<span>$</span>
+						<input class="inp"/>
+					</span>
+					at
+					<span class="percent">
+						<input class="inp"/>
+						<span>%</span>
+					</span>
+					<button class="delete inp">X</button>
+				</div>
+				`;
+				return markdown;
+			}
 
 
 			// Business Logic
@@ -133,45 +161,6 @@
 				setText("out_year", endYear);
 				setText("out_age", endAge);
 				setText("out_fund", formatToMoney(result.amount).split(".")[0]);
-			}
-
-			/**
-				data.value 			= current value of account
-				data.rate 	 		= interest rate
-				data.payment 		= monthly payment amount
-				data.desiredDraw	= how much we eventually want to draw from investments monthly
-			*/
-			function findResult(data){
-				const result = {
-					duration: 0,
-					amount: 0
-				};
-				const ca = new CompoundAccount(data);
-				let months = 0;
-
-				// make sure the account won't not grow
-				if (!((data.value==0 && data.payment<=0) || (data.rate<=0 && data.payment<=0))){
-					// Iterate until we have enough
-					while (!haveEnoughInvested(ca, data, months++) && months < 1000){
-						ca.step(data.payment)
-					}
-
-					if (months >= 1000){
-						console.log(ca, data);
-						throw new Error("Infinite Loop");
-					}
-				}
-				console.log(months);
-
-				result.duration = months;
-				result.amount = ca.value;
-
-				return result;
-			}
-
-			function haveEnoughInvested(ca, data, months){
-				// how much we want to draw(compensating for inflation) is less than how much we can draw per month
-				return data.desiredDraw*Math.pow(1+(INFLATION/12), months) <= ca.value*DRAWRATE/12;
 			}
 
 
@@ -212,8 +201,8 @@
 			    data: {
 			    	x: "xs",
 			    	columns: [
-						['xs', 30, 200, 100, 400, 150, 250],
-						['Amount', 50, 20, 10, 40, 15, 25]
+						['xs', 0],
+						['Amount', 0]
 					],
 					point: {
 						show: false
@@ -237,6 +226,7 @@
 			*/
 
 			// Start up
+			debts.innerHTML += getDebtMarkup();
 		</script>
 	</body>
 </html>
