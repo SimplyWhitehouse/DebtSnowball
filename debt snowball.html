@@ -4,6 +4,7 @@
 			.debts {
 				display: grid;
 				font-size: 1.3em;
+				padding: 10px;
 			}
 			
 			.debt {
@@ -42,7 +43,12 @@
 				font-size: 1em;
 				border-width: 1px;
 				border-color: black;
-				border-radius: 10px;
+				border-radius: 1em;
+			}
+			
+			#btn_addDebt {
+				font-size: 1.3em;
+				border-radius: 1em;
 			}
 
 		</style>
@@ -52,7 +58,8 @@
 	</head>
 	<body>
 		<center class="cntr title">
-			<div id="debts" class="debts"></div>
+			<div id="div_debts" class="debts"></div>
+			<button id="btn_addDebt">+</button>
 			<p></p>
 			<div id="chart"></div>
 		</center>
@@ -122,22 +129,39 @@
 			}
 			function getDebtMarkup(){
 				
+				const debtId = generateDebtID();
+				
 				const markdown =
 				`
-				<div class="debt">
+				<div class="debt" id="${debtId}">
 					<span class="money">
 						<span>$</span>
-						<input class="inp"/>
+						<input class="inp" value="0"/>
 					</span>
 					at
 					<span class="percent">
-						<input class="inp"/>
+						<input class="inp" value="0.0"/>
 						<span>%</span>
 					</span>
-					<button class="delete inp">X</button>
+					<button class="delete inp" onclick="deleteDebtClick(this)">X</button>
 				</div>
 				`;
 				return markdown;
+			}
+			function generateDebtID(){
+				const options = "abcdefghijklmnopqrstuvwxyz0123456789";
+				let id;
+				do {
+					id = new Array(4).fill(0)
+					.map(() => ~~(Math.random() * options.length))
+					.map(i => options[i])
+					.join("");
+				} while (idExists(id));
+				return id;
+				
+			}
+			function idExists(id){
+				return !!document.getElementById(id);
 			}
 
 
@@ -163,6 +187,13 @@
 				setText("out_fund", formatToMoney(result.amount).split(".")[0]);
 			}
 
+			function addDebtClick(evt){
+				document.getElementById("div_debts").innerHTML += getDebtMarkup();
+			}
+			
+			function deleteDebtClick(btn){
+				btn.parentElement.remove();
+			}
 
 			// Setup
 			let prevTO = 0;
@@ -173,6 +204,8 @@
 				};
 			}
 
+			document.getElementById("btn_addDebt").onclick = addDebtClick;
+			
 			(function(){
 				const svg = document.querySelector(".nav-toggle-label svg");
 				const header = document.getElementById("headerAnnouncementWrapper");
@@ -211,7 +244,7 @@
 			});
 
 			/**
-			// Add lines
+			// Add/Update lines
 			chart.load({
 				columns: [
 					['data1', 300, 100, 250, 150, 300, 150, 500],
@@ -226,7 +259,7 @@
 			*/
 
 			// Start up
-			debts.innerHTML += getDebtMarkup();
+			div_debts.innerHTML += getDebtMarkup();
 		</script>
 	</body>
 </html>
