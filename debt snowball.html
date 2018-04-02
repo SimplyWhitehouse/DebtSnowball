@@ -15,8 +15,13 @@
 			}
 			
 			.debt {
+				margin: auto;
 				--borderVal: 1px;
 				padding: 5px;
+				display: grid;
+				grid-template-columns: 1fr;
+				grid-row-gap: 0.5em;
+				margin-top: 30px;
 			}
 			
 			.money, .percent{
@@ -91,11 +96,13 @@
 					<span>$</span>
 					<input id="inp_payment" class="inp" data-type="money" value="0.00"/>
 				</span>
+				<p></p>
 			</div>
 			<hr/>
 			<div id="div_debts" class="debts">
 				<h2>Debts</h2>
 			</div>
+			<p></p>
 			<button id="btn_addDebt">+</button>
 			<p></p>
 		</center>
@@ -175,16 +182,18 @@
 				`
 				<div class="debt" id="${debtId}">
 					<input class="debtName" placeholder="Name"/>
-					<span class="money">
-						<span>$</span>
-						<input class="inp" value="0.00" data-type="money"/>
+					<span>
+						<span class="money">
+							<span>$</span>
+							<input class="inp" value="0.00" data-type="money"/>
+						</span>
+						at
+						<span class="percent">
+							<input class="inp" value="0.00" data-type="percent"/>
+							<span>%</span>
+						</span>
 					</span>
-					at
-					<span class="percent">
-						<input class="inp" value="0.00" data-type="percent"/>
-						<span>%</span>
-					</span>
-					<button class="delete inp" tabindex="-1">X</button>
+					<button class="delete inp" tabindex="-1">Delete</button>
 				</div>
 				`;
 				return strToHTML(markdown);
