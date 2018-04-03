@@ -40,20 +40,20 @@
 				padding: 3px;
 				margin: 0px 5px;
 				--borderVal: 0;
+				background: white !important;
 			}
 						
 			.money span, .percent span{
-				color: #777;
+				color: #888;
+				background: white;
 			}
 			
 			.money .inp{
 				width: 6em;
-				background: white !important;
 			}
 			
 			.percent .inp{
 				width: 3em;
-				background: white !important;
 			}
 			
 			.inp {
@@ -85,8 +85,8 @@
 			}
 			
 			#btn_addDebt {
-				font-size: 1.3em;
-				border-radius: 1em;
+				font-size: 1em;
+				border-radius: var(--myBorderRadius);
 				cursor: pointer;
 			}
 
@@ -117,7 +117,7 @@
 			<div id="div_debts" class="debts">
 			</div>
 			<p></p>
-			<button id="btn_addDebt">+</button>
+			<button id="btn_addDebt">NEW DEBT</button>
 			<p></p>
 		</center>
 		<script>
@@ -303,7 +303,7 @@ function deleteDebtClick(btn){
 
 // Setup
 
-// The inputs
+// The inputs and their callbacks
 document.getElementById("btn_addDebt").onclick = addDebtClick;
 document.querySelectorAll(queryForInputs)
 .forEach(el => {
@@ -346,14 +346,12 @@ var chart = c3.generate({
 		],
 		point: {
 			show: false
-		},
-		legend: {
-			show: false
 		}
     }
 });
+chart.legend.hide();
 
-/**
+/*
 // Add/Update lines
 chart.load({
 	columns: [
@@ -366,6 +364,11 @@ chart.load({
 chart.unload({
 	ids: ['Amount', 'xs']
 });
+
+// Show the legend
+chart.legend.show() // show all legends
+chart.legend.show('data1') // show legend for data1
+chart.legend.show(['data1', 'data2']) // show legends for data1 and data2
 */
 
 // Start up
