@@ -4,6 +4,10 @@
 			:root {
 				--myBorderRadius: 0.3em;
 			}
+
+			body {
+				background: #EEE;
+			}
 			
 			.cntr {
 				font-size: 1.3em;
@@ -80,7 +84,7 @@
 				border-color: black;
 				border-radius: var(--myBorderRadius);
 				text-align: center;
-				background: #FAA;
+				background: #F33;
 				cursor: pointer;
 			}
 			
@@ -88,6 +92,10 @@
 				font-size: 1em;
 				border-radius: var(--myBorderRadius);
 				cursor: pointer;
+			}
+
+			#chart svg{
+				background: #FFF;
 			}
 
 		</style>
@@ -346,6 +354,9 @@ var chart = c3.generate({
 		],
 		point: {
 			show: false
+		},
+		color: {
+			pattern: ['#1f77b4', '#aec7e8']
 		}
     }
 });
