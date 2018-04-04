@@ -125,7 +125,7 @@
 			<div id="div_debts" class="debts">
 			</div>
 			<p></p>
-			<button id="btn_addDebt">NEW DEBT</button>
+			<button id="btn_addDebt">ADD</button>
 			<p></p>
 		</center>
 		<script>
@@ -174,7 +174,11 @@ function CompoundAccount(config){
 }
 		</script>
 		<script>
-// utils
+/*******************/
+/*** START UTILS ***/
+/*******************/
+
+// Formatting
 function getVal(id){
 	return parseFloat(formatFromMoney(document.getElementById(id).value));
 }
@@ -198,6 +202,26 @@ function formatToPercent(num){
 function formatPercentElement(el){
 	el.value = formatToPercent(Number(el.value));
 }
+let prevTO = 0;
+function makeUpdateCallback(time){
+	return () => {
+		window.clearTimeout(prevTO);
+		prevTO = window.setTimeout(updateResults, time || 0)
+	};
+}
+const reformatMap = {
+	"money": formatMoneyElement,
+	"percent": formatPercentElement,
+}
+function reformatInputs(){
+	document.querySelectorAll(queryForInputs)
+	.forEach(el => {
+		reformatMap[el.dataset.type](el);
+	});
+}
+
+
+// Debt Element making
 function makeDebtElement(debtId){
 	
 	const markdown =
@@ -250,38 +274,26 @@ function addHandlersToDebt(div_debt){
 	
 	// Delete Button
 	const btn_del = div_debt.querySelector(".delete")
-	btn_del.onclick = () => deleteDebtClick(btn_del);
+	btn_del.onclick = () => deleteDebtClickHandler(btn_del);
 }
-let prevTO = 0;
-function makeUpdateCallback(time){
-	return () => {
-		window.clearTimeout(prevTO);
-		prevTO = window.setTimeout(updateResults, time || 0)
-	};
+function addDebtToPage(debt){
+	document.getElementById("div_debts").appendChild(debt);
 }
-const reformatMap = {
-	"money": formatMoneyElement,
-	"percent": formatPercentElement,
-}
-function reformatInputs(){
-	document.querySelectorAll(queryForInputs)
-	.forEach(el => {
-		reformatMap[el.dataset.type](el);
-	});
-}
+
+
+// Get information about the debts
 function getAllDebts(){
-	return Array.from(document.querySelectorAll(".debt"))
-	.map(getDebtData)
-	.sort(ascendingValue);
+	return Array.from(document.querySelectorAll(".debt")) // get the debt DOM elements
+	.map(debtToObj) // convert to objects
+	.sort(ascendingValue); // sort by ascending value
 }
 function ascendingValue(a, b){
 	return a.value - b.value;
 }
-function getDebtData(debt){
+function debtToObj(debt){
 	const val = Number(debt.querySelector(".money .inp").value);
 	const rate = Number(debt.querySelector(".percent .inp").value)/100;
 	const name = debt.querySelector(".debtName").value;
-	
 	return {
 		"value": val,
 		"rate" : rate,
@@ -290,29 +302,45 @@ function getDebtData(debt){
 	};
 }
 
+/*****************/
+/*** END UTILS ***/
+/*****************/
 
 
-// Business Logic
+
+/****************************/
+/*** START BUSINESS LOGIC ***/
+/****************************/
+
 function updateResults(){
 	reformatInputs();
 }
 
-function addDebtClick(){
+function addDebtClickHandler(){
 	const debtId = generateDebtID();
 	const debt = makeDebtElement(debtId);
-	document.getElementById("div_debts").appendChild(debt);
+	addDebtToPage(debt);
 	addHandlersToDebt(debt);
 }
 
-function deleteDebtClick(btn){
+function deleteDebtClickHandler(btn){
 	btn.parentElement.remove();
 	updateResults();
 }
 
-// Setup
+/**************************/
+/*** END BUSINESS LOGIC ***/
+/**************************/
+
+
+
+/***************************/
+/*** START GENERAL SETUP ***/
+/***************************/
 
 // The inputs and their callbacks
-document.getElementById("btn_addDebt").onclick = addDebtClick;
+document.getElementById("btn_addDebt").onclick = addDebtClickHandler;
+
 document.querySelectorAll(queryForInputs)
 .forEach(el => {
 	el.onchange = makeUpdateCallback(2000);
@@ -354,9 +382,6 @@ var chart = c3.generate({
 		],
 		point: {
 			show: false
-		},
-		color: {
-			pattern: ['#1f77b4', '#aec7e8']
 		}
     }
 });
@@ -382,10 +407,22 @@ chart.legend.show('data1') // show legend for data1
 chart.legend.show(['data1', 'data2']) // show legends for data1 and data2
 */
 
-// Start up
-addDebtClick();
-addDebtClick();
-updateResults();
+/*************************/
+/*** END GENERAL SETUP ***/
+/*************************/
+
+
+
+/****************/
+/*** Start up ***/
+/****************/
+
+// Simulate adding a debt so there is one
+addDebtClickHandler();
+
+/****************/
+/*** Start up ***/
+/****************/
 		</script>
 	</body>
 </html>
