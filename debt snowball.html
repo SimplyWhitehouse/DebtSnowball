@@ -144,7 +144,7 @@ function CompoundAccount(config){
 	this.value = config.hasOwnProperty("value") ? roundToMoney(config.value) : 0;
 
 	// Interest rate of the account, default 0%
-	const rate = config.hasOwnProperty("rate") ? config.rate : 0;
+	this.rate = config.hasOwnProperty("rate") ? config.rate : 0;
 
 	// Floor to the hundredth
 	function roundToMoney(num){
@@ -297,7 +297,7 @@ function ascendingValue(a, b){
 }
 function debtToObj(debt){
 	const val = parseFloat(formatFromMoney(debt.querySelector(".money .inp").value));
-	const rate = parseFloat(formatFromMoney(debt.querySelector(".percent .inp").value))/100;
+	const rate = parseFloat(formatFromMoney(debt.querySelector(".percent .inp").value))/100/12; // %/month
 	const name = debt.querySelector(".debtName").value;
 	return {
 		"value": val,
@@ -310,7 +310,7 @@ function getMinPayment10yrs(debt){
 	const n = 120; // 10 years * 12 months/year = 120 months
 	// The "official" equation
 	const D = (Math.pow(1+debt.rate, n) - 1) / (debt.rate*Math.pow(1 + debt.rate, n));
-	const P = debt.value * D;
+	const P = debt.value / D;
 	return P;
 }
 
@@ -325,6 +325,7 @@ function produceSnowballFromDebts(currDebts){
 	};
 	monthlyPayment = getVal("inp_monthlyPayment");
 	// Pay stuff down
+	const ap = new AccountPool(currDebts);
 	/* I should make an AccountPool object to make this easier
 	const arr = currDebts.map(debt => {
 		id: debt.id,
@@ -354,6 +355,35 @@ function snowballToChartData(snowball){
 		data.columns.push(arr);
 	}
 	return data;
+}
+
+// AccountPool Class
+function AccountPool(debts){
+	this.wrappers = debts.map(makeCAWrapper);
+	
+}
+function makeCAWrapper(ca){
+	return new function(){
+		this.minPmt = getMinPayment10yrs(ca);
+
+		let pmt = 0;
+
+		this.addMinToPayment = amt => {
+			remaining = amt;
+			if (amt > minPmt) {
+				pmt = minPmt;
+				remaining -= minPmt;
+			} else {
+				pmt = amt;
+				remaining = 0;
+			}
+			return remaining;
+		};
+
+		this.step = amt => {
+			ca.step(amt + pmt);
+		}
+	}
 }
 /*****************/
 /*** END UTILS ***/
