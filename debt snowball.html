@@ -116,7 +116,7 @@
 				<p>How Much Can You Pay Toward Debt A Month?</p>
 				<span class="money">
 					<span>$</span>
-					<input id="inp_payment" class="inp" data-type="money" value="0.00"/>
+					<input id="inp_monthlyPayment" class="inp" data-type="money" value="0.00"/>
 				</span>
 				<p></p>
 			</div>
@@ -178,7 +178,7 @@ function CompoundAccount(config){
 /*** START UTILS ***/
 /*******************/
 
-// Formatting
+// Manipulate Generic Elements
 function getVal(id){
 	return parseFloat(formatFromMoney(document.getElementById(id).value));
 }
@@ -187,6 +187,8 @@ function setText(id, str){
 	el.innerText = str;
 	el.value = str;
 }
+
+// Formatting
 function formatToMoney(num){
 	return num.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
 }
@@ -205,6 +207,7 @@ function formatPercentElement(el){
 let prevTO = 0;
 function makeUpdateCallback(time){
 	return () => {
+		console.log("Updating...");
 		window.clearTimeout(prevTO);
 		prevTO = window.setTimeout(updateResults, time || 0)
 	};
@@ -291,8 +294,8 @@ function ascendingValue(a, b){
 	return a.value - b.value;
 }
 function debtToObj(debt){
-	const val = Number(debt.querySelector(".money .inp").value);
-	const rate = Number(debt.querySelector(".percent .inp").value)/100;
+	const val = parseFloat(formatFromMoney(debt.querySelector(".money .inp").value));
+	const rate = parseFloat(formatFromMoney(debt.querySelector(".percent .inp").value))/100;
 	const name = debt.querySelector(".debtName").value;
 	return {
 		"value": val,
@@ -303,11 +306,18 @@ function debtToObj(debt){
 }
 
 // Dealing with the debt objects
-function produceDebtSnowball(currDebts){
+/**
+	{debtObj[]} currDebts - The Current debts
+*/
+function produceSnowballFromDebts(currDebts){
 	const snowball = {
 		debts: {}, // debtName: [debtData]
 		xs	 : [] // debt x data
 	};
+	monthlyPayment = getVal("inp_monthlyPayment");
+	// Pay stuff down
+	const cas = currDebts.map(debt => new CompoundAccount(debt));
+
 	return snowball;
 }
 function loadDebtsSnowballToChart(snowball){
@@ -344,7 +354,7 @@ function snowballToChartData(snowball){
 function updateResults(){
 	reformatInputs();
 	const currDebts = getAllDebts();
-	const debtSnowball = produceDebtSnowball(currDebts);
+	const debtSnowball = produceSnowballFromDebts(currDebts);
 	loadDebtsSnowballToChart(debtSnowball);
 }
 
