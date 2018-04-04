@@ -141,7 +141,7 @@ function CompoundAccount(config){
 	config = config || {};
 				
 	// Start value of the account, default $0
-	this.value = config.hasOwnProperty("value") ? toMoney(config.value) : 0;
+	this.value = config.hasOwnProperty("value") ? roundToMoney(config.value) : 0;
 
 	// Interest rate of the account, default 0%
 	const rate = config.hasOwnProperty("rate") ? config.rate : 0;
@@ -219,7 +219,9 @@ const reformatMap = {
 function reformatInputs(){
 	document.querySelectorAll(queryForInputs)
 	.forEach(el => {
-		reformatMap[el.dataset.type](el);
+		if (reformatMap.hasOwnProperty(el.dataset.type)){
+			reformatMap[el.dataset.type](el);
+		}
 	});
 }
 
@@ -266,7 +268,7 @@ function generateDebtID(){
 function idExists(id){
 	return !!document.getElementById(id);
 }
-var queryForInputs = ".money input, .percent input";
+var queryForInputs = ".debt input, .debt * input";
 function addHandlersToDebt(div_debt){
 	// Formatting the inputs after timeout or on blur
 	div_debt.querySelectorAll(queryForInputs)
@@ -304,6 +306,13 @@ function debtToObj(debt){
 		"name" : name
 	};
 }
+function getMinPayment10yrs(debt){
+	const n = 120; // 10 years * 12 months/year = 120 months
+	// The "official" equation
+	const D = (Math.pow(1+debt.rate, n) - 1) / (debt.rate*Math.pow(1 + debt.rate, n));
+	const P = debt.value * D;
+	return P;
+}
 
 // Dealing with the debt objects
 /**
@@ -316,7 +325,12 @@ function produceSnowballFromDebts(currDebts){
 	};
 	monthlyPayment = getVal("inp_monthlyPayment");
 	// Pay stuff down
-	const cas = currDebts.map(debt => new CompoundAccount(debt));
+	/* I should make an AccountPool object to make this easier
+	const arr = currDebts.map(debt => {
+		id: debt.id,
+		ca: new CompoundAccount(debt)
+	});
+	*/
 
 	return snowball;
 }
