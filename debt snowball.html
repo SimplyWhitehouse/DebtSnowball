@@ -311,10 +311,12 @@ function produceDebtSnowball(currDebts){
 	return snowball;
 }
 function loadDebtsSnowballToChart(snowball){
-
+	const data = snowballToChartData(snowball);
+	chart.load(data);
 }
 function snowballToChartData(snowball){
 	const data = {
+		unload: true,
 		columns: []
 	};
 	// Add xs
@@ -407,25 +409,23 @@ var chart = c3.generate({
     bindto: '#chart',
     data: {
     	x: "xs",
-    	xFormat: "%Y-%m-%d",
     	columns: [
 			['xs', 0],
-			['Amount', 0]
-		],
-		point: {
-			show: false
+			['Enter A Debt', 0]
+		]
+	},
+	axis: {
+		x: {
+			label: "Months"
 		},
-		axis: {
-	    	x: {
-	      		type: 'timeseries',
-        		tick: {
-                	format: "%b-%d"
-            	}
-            }
-	    }
-    }
+		y: {
+			label: "$"
+		}
+	},
+	point: {
+		show: false
+	}
 });
-chart.legend.hide();
 
 /*
 // Add/Update lines
