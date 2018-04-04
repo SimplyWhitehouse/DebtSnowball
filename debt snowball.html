@@ -302,6 +302,33 @@ function debtToObj(debt){
 	};
 }
 
+// Dealing with the debt objects
+function produceDebtSnowball(currDebts){
+	const snowball = {
+		debts: {}, // debtName: [debtData]
+		xs	 : [] // debt x data
+	};
+	return snowball;
+}
+function loadDebtsSnowballToChart(snowball){
+
+}
+function snowballToChartData(snowball){
+	const data = {
+		columns: []
+	};
+	// Add xs
+	data.columns.push(['xs'].concat(snowball.xs));
+
+	// Do the rest of the debts
+	for (debtName in snowball.debts){
+		let arr = [];
+		arr.push(debtName);
+		arr = arr.concat(snowball.debts[debtName]);
+		data.columns.push(arr);
+	}
+	return data;
+}
 /*****************/
 /*** END UTILS ***/
 /*****************/
@@ -314,6 +341,9 @@ function debtToObj(debt){
 
 function updateResults(){
 	reformatInputs();
+	const currDebts = getAllDebts();
+	const debtSnowball = produceDebtSnowball(currDebts);
+	loadDebtsSnowballToChart(debtSnowball);
 }
 
 function addDebtClickHandler(){
@@ -372,17 +402,27 @@ document.querySelectorAll(queryForInputs)
 })()
 /* */
 
+//https://jsfiddle.net/8aL1stcs/66/
 var chart = c3.generate({
     bindto: '#chart',
     data: {
     	x: "xs",
+    	xFormat: "%Y-%m-%d",
     	columns: [
 			['xs', 0],
 			['Amount', 0]
 		],
 		point: {
 			show: false
-		}
+		},
+		axis: {
+	    	x: {
+	      		type: 'timeseries',
+        		tick: {
+                	format: "%b-%d"
+            	}
+            }
+	    }
     }
 });
 chart.legend.hide();
@@ -407,22 +447,12 @@ chart.legend.show('data1') // show legend for data1
 chart.legend.show(['data1', 'data2']) // show legends for data1 and data2
 */
 
-/*************************/
-/*** END GENERAL SETUP ***/
-/*************************/
-
-
-
-/****************/
-/*** Start up ***/
-/****************/
-
 // Simulate adding a debt so there is one
 addDebtClickHandler();
 
-/****************/
-/*** Start up ***/
-/****************/
+/*************************/
+/*** END GENERAL SETUP ***/
+/*************************/
 		</script>
 	</body>
 </html>
