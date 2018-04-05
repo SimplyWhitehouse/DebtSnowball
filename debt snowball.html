@@ -160,7 +160,7 @@ function CompoundAccount(config){
 	this.step = function(delta){
 		delta = roundToMoney(delta) || 0;
 		
-		let newValue = roundToMoney(this.value*(1+rate) + delta);
+		let newValue = roundToMoney(this.value*(1+this.rate) + delta);
 		let remainingDelta = 0
 		
 		if (newValue < 0) {
@@ -307,6 +307,10 @@ function debtToObj(debt){
 	};
 }
 function getMinPayment10yrs(debt){
+	if (debt.rate == 0 || debt.value == 0){
+		return 0;
+	}
+
 	const n = 120; // 10 years * 12 months/year = 120 months
 	// The "official" equation
 	const D = (Math.pow(1+debt.rate, n) - 1) / (debt.rate*Math.pow(1 + debt.rate, n));
@@ -323,18 +327,35 @@ function produceSnowballFromDebts(currDebts){
 		debts: {}, // debtName: [debtData]
 		xs	 : [] // debt x data
 	};
-	monthlyPayment = getVal("inp_monthlyPayment");
-	// Pay stuff down
+
+	// Make sure it is negative
+	monthlyPayment = -getVal("inp_monthlyPayment");
+	
 	const ap = new AccountPool(currDebts);
-	/* I should make an AccountPool object to make this easier
-	const arr = currDebts.map(debt => {
-		id: debt.id,
-		ca: new CompoundAccount(debt)
-	});
-	*/
+
+	let snapshot = ap.getSnapshot();
+	prefillSnowballWithSnapshot(snapshot, snowball);
+	// Next number
+	snowball.xs.push(snowball.xs.length);
+
+	remaining = 0;
+	do {
+		// Pay everything down
+		remaining = ap.step(monthlyPayment);
+
+		// add data to the snowball
+		snapshot = ap.getSnapshot();
+		addSnapshotToSnowball(snapshot, snowball);
+
+		// Next number
+		snowball.xs.push(snowball.xs.length);
+
+		// Till we have something left over
+	} while (remaining == 0)
 
 	return snowball;
 }
+
 function loadDebtsSnowballToChart(snowball){
 	const data = snowballToChartData(snowball);
 	chart.load(data);
@@ -356,24 +377,62 @@ function snowballToChartData(snowball){
 	}
 	return data;
 }
-
-// AccountPool Class
-function AccountPool(debts){
-	this.wrappers = debts.map(makeCAWrapper);
-	
+function prefillSnowballWithSnapshot(snapshot, snowball){
+	for (name in snapshot){
+		snowball.debts[name] = [];
+		snowball.debts[name].push(snapshot[name]);
+	}
 }
-function makeCAWrapper(ca){
-	return new function(){
-		this.minPmt = getMinPayment10yrs(ca);
+function addSnapshotToSnowball(snapshot, snowball){
+	for (name in snapshot){
+		snowball.debts[name].push(snapshot[name]);
+	}
+}
+
+// Debt Helper Classes and Functions
+function AccountPool(debts){
+	this.wrappers = debts.map(wrapDebt);
+
+	this.step = amt => {
+		// Take the minimum from amt and add it to the each wrapper's payment
+		this.wrappers.forEach(w => amt = w.addMinToPayment(amt));
+
+		// Take max from amt and step each wrapper
+		this.wrappers.forEach(w => amt = w.step(amt));
+
+		return amt;
+	};
+
+	this.getSnapshot = () => {
+		const snapshot = {};
+		this.wrappers.forEach(w =>{
+			snapshot[w.name] = w.getValue();
+		});
+		return snapshot;
+	};
+}
+function wrapDebt(debt){
+	return new DebtWrapper(debt);
+}
+function DebtWrapper(debt){
+		this.name = debt.name;
+		this.rate = debt.rate;
+		this.id   = debt.id;
 
 		let pmt = 0;
 
+		const ca = new CompoundAccount(debt);
+
+		this.minPmt = getMinPayment10yrs(ca);
+
 		this.addMinToPayment = amt => {
 			remaining = amt;
-			if (amt > minPmt) {
-				pmt = minPmt;
-				remaining -= minPmt;
+			// If we have enough to make the min payment, take it out
+			if (Math.abs(amt) > this.minPmt) {
+				pmt = this.minPmt;
+				remaining -= this.minPmt;
 			} else {
+				// Otherwise, take what you can
 				pmt = amt;
 				remaining = 0;
 			}
@@ -381,10 +440,11 @@ function makeCAWrapper(ca){
 		};
 
 		this.step = amt => {
-			ca.step(amt + pmt);
-		}
+			return ca.step(amt + pmt);
+		};
+
+		this.getValue = () => ca.value;
 	}
-}
 /*****************/
 /*** END UTILS ***/
 /*****************/
