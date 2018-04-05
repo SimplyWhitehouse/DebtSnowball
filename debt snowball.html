@@ -96,6 +96,7 @@
 
 			#chart svg{
 				background: #FFF;
+				font-size: 0.6em;
 			}
 
 		</style>
@@ -104,13 +105,6 @@
 	</head>
 	<body>
 		<center class="cntr title">
-			<div>
-				<style>
-					@import url("https://rawgit.com/c3js/c3/master/c3.min.css");
-				</style>
-				<div id="chart"></div>
-			</div>
-			<hr/>
 			<div id="div_payment">
 				<h2>Payment</h2>
 				<p>How Much Can You Pay Toward Debt A Month?</p>
@@ -127,6 +121,13 @@
 			<p></p>
 			<button id="btn_addDebt">ADD</button>
 			<p></p>
+			<hr/>
+			<div>
+				<style>
+					@import url("https://rawgit.com/c3js/c3/master/c3.min.css");
+				</style>
+				<div id="chart"></div>
+			</div>
 		</center>
 		<script>
 /** Acts as an account that is affected by compound interest
@@ -164,7 +165,7 @@ function CompoundAccount(config){
 		let remainingDelta = 0
 		
 		if (newValue < 0) {
-			remainingDelta = -newValue;
+			remainingDelta = newValue;
 			newValue = 0;
 		}
 
@@ -329,7 +330,10 @@ function produceSnowballFromDebts(currDebts){
 	};
 
 	// Make sure it is negative
-	monthlyPayment = -getVal("inp_monthlyPayment");
+	monthlyDelta = -getVal("inp_monthlyPayment");
+	if (monthlyDelta >= 0){
+		return;
+	}
 	
 	const ap = new AccountPool(currDebts);
 
@@ -341,7 +345,7 @@ function produceSnowballFromDebts(currDebts){
 	remaining = 0;
 	do {
 		// Pay everything down
-		remaining = ap.step(monthlyPayment);
+		remaining = ap.step(monthlyDelta);
 
 		// add data to the snowball
 		snapshot = ap.getSnapshot();
@@ -415,36 +419,47 @@ function wrapDebt(debt){
 	return new DebtWrapper(debt);
 }
 function DebtWrapper(debt){
-		this.name = debt.name;
-		this.rate = debt.rate;
-		this.id   = debt.id;
+	this.name = debt.name;
+	this.rate = debt.rate;
+	this.id   = debt.id;
 
-		let pmt = 0;
+	let pmt = 0;
 
-		const ca = new CompoundAccount(debt);
+	const ca = new CompoundAccount(debt);
 
-		this.minPmt = getMinPayment10yrs(ca);
+	this.minDelta = -getMinPayment10yrs(ca);
 
-		this.addMinToPayment = amt => {
-			remaining = amt;
-			// If we have enough to make the min payment, take it out
-			if (Math.abs(amt) > this.minPmt) {
-				pmt = this.minPmt;
-				remaining -= this.minPmt;
-			} else {
-				// Otherwise, take what you can
-				pmt = amt;
-				remaining = 0;
-			}
-			return remaining;
-		};
+	this.addMinToPayment = delta => {
+		remaining = delta;
+		// If we have enough to make the min payment, take it out
+		if (Math.abs(delta) > this.minDelta) {
+			pmt = this.minDelta;
+			remaining -= this.minDelta;
+		} else {
+			// Otherwise, take what you can
+			pmt = delta;
+			remaining = 0;
+		}
+		return remaining;
+	};
 
-		this.step = amt => {
-			return ca.step(amt + pmt);
-		};
+	this.step = delta => {
+		return ca.step(delta + pmt);
+	};
 
-		this.getValue = () => ca.value;
-	}
+	this.getValue = () => ca.value;
+}
+
+// Chart manipulation
+function setChartTitle(str){
+	d3.select('#chart .c3-title')
+	.style("dominant-baseline", "central")
+    .style('font-size', '4em');
+
+    d3.select('#chart .c3-axis-x-label')
+	.style("dominant-baseline", "central")
+    .style('font-size', '4em');
+}
 /*****************/
 /*** END UTILS ***/
 /*****************/
@@ -521,24 +536,54 @@ document.querySelectorAll(queryForInputs)
 //https://jsfiddle.net/8aL1stcs/66/
 var chart = c3.generate({
     bindto: '#chart',
+    title: {
+    	text: "Enter A Debt",
+    },
     data: {
     	x: "xs",
     	columns: [
 			['xs', 0],
-			['Enter A Debt', 0]
+			['', 0]
 		]
 	},
 	axis: {
 		x: {
-			label: "Months"
+			label: {
+				text: "Months of Payments",
+				position: "outer-center",
+				size: "30px"
+			},
+			min: 0,
+			padding: {
+				left: 0
+			}
 		},
 		y: {
-			label: "$"
+			label: {
+				text: "Debt Values",
+				position: "outer-middle"
+			},
+			tick: {
+				// format to money but with no cents
+				format: value => {return "$" + formatToMoney(value).slice(0, -3);},
+			},
+			min: 0,
+			padding: {
+				bottom: 0,
+				top: 10
+			},
+
 		}
 	},
 	point: {
 		show: false
-	}
+	},
+	tooltip: {
+        format: {
+            title: function (d) { return 'Month ' + d; },
+            value: value => {return "$" + formatToMoney(value);},
+        }
+    }
 });
 
 /*
@@ -563,7 +608,7 @@ chart.legend.show(['data1', 'data2']) // show legends for data1 and data2
 
 // Simulate adding a debt so there is one
 addDebtClickHandler();
-
+chart.legend.hide();
 /*************************/
 /*** END GENERAL SETUP ***/
 /*************************/
