@@ -96,7 +96,11 @@
 
 			#chart svg{
 				background: #FFF;
-				font-size: 0.6em;
+				ffont-size: 0.6em;
+			}
+
+			.c3-title {
+				font-size: 2em;
 			}
 
 		</style>
@@ -451,14 +455,11 @@ function DebtWrapper(debt){
 }
 
 // Chart manipulation
-function setChartTitle(str){
-	d3.select('#chart .c3-title')
-	.style("dominant-baseline", "central")
-    .style('font-size', '4em');
-
-    d3.select('#chart .c3-axis-x-label')
-	.style("dominant-baseline", "central")
-    .style('font-size', '4em');
+function updateChartTitle(snowball){
+	d3.select(".c3-title")
+	.style("dominant-baseline", "hanging")
+    .style("font-size", "1.75em")
+    .text(`Debt Free In ${snowball.xs.length - 2} Months`);
 }
 /*****************/
 /*** END UTILS ***/
@@ -475,6 +476,7 @@ function updateResults(){
 	const currDebts = getAllDebts();
 	const debtSnowball = produceSnowballFromDebts(currDebts);
 	loadDebtsSnowballToChart(debtSnowball);
+	updateChartTitle(debtSnowball);
 }
 
 function addDebtClickHandler(){
