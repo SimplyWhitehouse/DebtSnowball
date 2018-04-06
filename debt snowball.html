@@ -212,7 +212,6 @@ function formatPercentElement(el){
 let prevTO = 0;
 function makeUpdateCallback(time){
 	return () => {
-		console.log("Updating...");
 		window.clearTimeout(prevTO);
 		prevTO = window.setTimeout(updateResults, time || 0)
 	};
@@ -231,7 +230,7 @@ function reformatInputs(){
 }
 
 
-// Debt Element making
+// Debt Element manipulation
 function makeDebtElement(debtId){
 	
 	const markdown =
@@ -252,7 +251,11 @@ function makeDebtElement(debtId){
 		<button class="delete inp" tabindex="-1">Delete</button>
 	</div>
 	`;
-	return strToHTML(markdown);
+	const el = strToHTML(markdown);
+
+	addHandlersToDebt(el);
+
+	return el;
 }
 function strToHTML(str){
 	const wrapper = document.createElement("div");
@@ -273,12 +276,12 @@ function generateDebtID(){
 function idExists(id){
 	return !!document.getElementById(id);
 }
-var queryForInputs = ".debt input, .debt * input";
+var queryForInputs = ".debt input, .money input, .percent input";
 function addHandlersToDebt(div_debt){
 	// Formatting the inputs after timeout or on blur
 	div_debt.querySelectorAll(queryForInputs)
 	.forEach(el => {
-		el.onchange = makeUpdateCallback(2000);
+		el.oninput = makeUpdateCallback(2000);
 		el.onblur = makeUpdateCallback(0);
 	});
 	
@@ -288,6 +291,9 @@ function addHandlersToDebt(div_debt){
 }
 function addDebtToPage(debt){
 	document.getElementById("div_debts").appendChild(debt);
+}
+function removeDebtElement(btn){
+	btn.parentNode.remove();
 }
 
 
@@ -364,13 +370,14 @@ function produceSnowballFromDebts(currDebts){
 	return snowball;
 }
 
-function loadDebtsSnowballToChart(snowball){
+function updateChartFromSnowball(snowball){
 	const data = snowballToChartData(snowball);
 	chart.load(data);
+	updateChartTitle(snowball);
 }
 function snowballToChartData(snowball){
 	const data = {
-		unload: true,
+		unload: true, // Unload previously stored data
 		columns: []
 	};
 	// Add xs
@@ -385,6 +392,10 @@ function snowballToChartData(snowball){
 	}
 	return data;
 }
+/* This always happens once at the beginning of a solve.
+	So, I figured I'd make it into a function and not bother
+	with logic inside of addSnapshotToSnowball().
+*/
 function prefillSnowballWithSnapshot(snapshot, snowball){
 	for (name in snapshot){
 		snowball.debts[name] = [];
@@ -475,19 +486,17 @@ function updateResults(){
 	reformatInputs();
 	const currDebts = getAllDebts();
 	const debtSnowball = produceSnowballFromDebts(currDebts);
-	loadDebtsSnowballToChart(debtSnowball);
-	updateChartTitle(debtSnowball);
+	updateChartFromSnowball(debtSnowball);
 }
 
 function addDebtClickHandler(){
 	const debtId = generateDebtID();
 	const debt = makeDebtElement(debtId);
 	addDebtToPage(debt);
-	addHandlersToDebt(debt);
 }
 
 function deleteDebtClickHandler(btn){
-	btn.parentElement.remove();
+	removeDebtElement(btn);
 	updateResults();
 }
 
