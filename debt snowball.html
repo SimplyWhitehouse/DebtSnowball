@@ -228,6 +228,31 @@ function reformatInputs(){
 		}
 	});
 }
+function monthsToYearsNotation(num){
+	const years = ~~(num / 12);
+	const months = num - years*12;
+	let strBuilder = [];
+	if (years > 0){
+		strBuilder.push(`${years} Year`)
+		if (years > 1){
+			strBuilder.push("s");
+		}
+		if (months > 0){
+			strBuilder.push(" and ");
+		}
+	}
+	if (months > 0){
+		strBuilder.push(`${months} Month`);
+
+		if (months > 1) {
+			strBuilder.push("s");
+		}
+	} else if (years == 0){
+		strBuilder.push("0 Months");
+	}
+	const str = strBuilder.join("");
+	return str;
+}
 
 
 // Debt Element manipulation
@@ -470,7 +495,7 @@ function updateChartTitle(snowball){
 	d3.select(".c3-title")
 	.style("dominant-baseline", "hanging")
     .style("font-size", "1.75em")
-    .text(`Debt Free In ${snowball.xs.length - 2} Months`);
+    .text(`Debt Free In ${monthsToYearsNotation(snowball.xs.length - 2)}`);
 }
 /*****************/
 /*** END UTILS ***/
@@ -591,7 +616,7 @@ var chart = c3.generate({
 	},
 	tooltip: {
         format: {
-            title: function (d) { return 'Month ' + d; },
+            title: monthsToYearsNotation,
             value: value => {return "$" + formatToMoney(value);},
         }
     }
